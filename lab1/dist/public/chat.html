@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Chat Room</title>
+    <link
+      href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css"
+      rel="stylesheet"
+    />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="chat-styles.css" />
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+  </head>
+  <body>
+    <div
+      class="container-fluid d-flex justify-content-center align-items-center vh-100"
+    >
+      <div
+        id="chat-container"
+        class="row w-100 h-95 bg-white shadow-lg overflow-hidden"
+      >
+        <!-- Sidebar -->
+        <div
+          id="sidebar"
+          class="col-md-3 p-4 bg-primary text-white d-flex flex-column align-items-center"
+        >
+          <h2 id="room-name" class="mb-4">Chat Room</h2>
+          <ul id="users" class="list-unstyled w-100"></ul>
+        </div>
+
+        <!-- Chat Area -->
+        <div id="chat-area" class="col-md-9 d-flex flex-column p-4 bg-light">
+          <ul
+            id="messages"
+            class="list-unstyled flex-grow-1 overflow-auto mb-3"
+          ></ul>
+          <form id="message-form" class="d-flex">
+            <input
+              id="message"
+              type="text"
+              class="form-control mr-2"
+              placeholder="Type a message..."
+              autocomplete="off"
+            />
+            <button type="submit" class="btn btn-primary">Send</button>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      $(function () {
+        var socket = io();
+        const urlParams = new URLSearchParams(window.location.search);
+        const username = urlParams.get("username");
+        const room = urlParams.get("room");
+
+        if (username && room) {
+          // Emit the join room event
+          socket.emit("join room", { username, room });
+
+          // Display the room name
+          $("#room-name").text(`Room: ${room}`);
+
+          // Store colors for each user
+          const userColors = {};
+
+          function getColorForUser(user) {
+            if (!userColors[user]) {
+              const r = Math.floor(Math.random() * 156) + 100; // Restrict to lighter range (100-255)
+              const g = Math.floor(Math.random() * 156) + 100;
+              const b = Math.floor(Math.random() * 156) + 100;
+
+              userColors[user] = `#${((1 << 24) + (r << 16) + (g << 8) + b)
+                .toString(16)
+                .slice(1)}`;
+            }
+            return userColors[user];
+          }
+
+          function formatTimestamp() {
+            const now = new Date();
+            const hours = now.getHours().toString().padStart(2, "0");
+            const minutes = now.getMinutes().toString().padStart(2, "0");
+            return `${hours}:${minutes}`;
+          }
+
+          // Handle incoming chat messages
+          socket.on("chat message", function (data) {
+            const color = getColorForUser(data.username);
+            const timestamp = formatTimestamp();
+            const messageElement = $("<li>")
+              .css({
+                backgroundColor: color,
+                padding: "8px",
+                borderRadius: "4px",
+                marginBottom: "5px",
+              })
+              .append(
+                $("<div>")
+                  .css({
+                    fontWeight: "bold",
+                    marginBottom: "2px",
+                  })
+                  .text(`${data.username} [${timestamp}]`)
+              )
+              .append($("<div>").text(data.msg));
+            $("#messages").append(messageElement);
+          });
+
+          // Handle a user connecting
+          socket.on("user connected", function (user) {
+            $("#messages").append($("<li>").text(`${user} joined the room`));
+            $("#users").append($("<li>").text(user));
+          });
+
+          // Handle a user disconnecting
+          socket.on("user disconnected", function (user) {
+            $("#messages").append($("<li>").text(`${user} left the room`));
+            $("#users")
+              .find("li")
+              .filter(function () {
+                return $(this).text() === user;
+              })
+              .remove();
+          });
+
+          // Handle the list of users in the room
+          socket.on("room users", function (users) {
+            $("#users").empty();
+            users.forEach((user) => {
+              $("#users").append($("<li>").text(user));
+            });
+          });
+
+          // Handle message form submission
+          $("#message-form").submit(function () {
+            socket.emit("chat message", $("#message").val());
+            $("#message").val("");
+            return false;
+          });
+        } else {
+          alert("Username and room are required");
+          window.location.href = "/";
+        }
+      });
+    </script>
+  </body>
+</html>

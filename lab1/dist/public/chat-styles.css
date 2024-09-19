@@ -1,0 +1,35 @@
+body {
+  font-family: "Roboto", sans-serif;
+  background-color: #f4f4f9;
+  margin: 0;
+}
+
+#chat-container {
+  border-radius: 15px;
+  height: 95%;
+}
+
+#room-name {
+  font-weight: 500;
+}
+
+#users li {
+  background-color: rgba(255, 255, 255, 0.2);
+  padding: 10px;
+  border-radius: 5px;
+  margin-bottom: 10px;
+  text-align: center;
+}
+
+#messages li {
+  padding: 10px;
+  margin-bottom: 5px;
+  border-radius: 5px;
+  background-color: #e9ecef;
+  color: black;
+}
+
+#message-form {
+  position: sticky;
+  bottom: 0;
+}
